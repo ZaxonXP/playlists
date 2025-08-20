@@ -1,0 +1,410 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Muzyka rozbudzająca</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #player {
+            margin: 20px 0;
+            width: 100%;
+            max-width: 600px;
+        }
+        #current-track {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #playlist {
+            list-style: none;
+            padding: 0;
+            max-width: 600px;
+            width: 100%;
+        }
+        #playlist li {
+            padding: 10px;
+            background-color: #fff;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #playlist li:hover {
+            background-color: #e0e0e0;
+        }
+        #playlist li.active {
+            background-color: #d0f0c0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="current-track">Odtwarzanie: ---</div>
+    <audio id="player" controls>
+        <source src="" type="audio/mpeg">
+        Twoja przeglądarka nie obsługuje elementu audio.
+    </audio>
+    <ul id="playlist"></ul>
+    <script>
+        const playlist = [
+            {title: "Zlata Dzardanova - Jamaika", url: "https://archive.org/download/cc-niekomercyjne-3/Zlata_Dzardanova_-_Jamaika.mp3"},
+			{title: "Sandra Reisch - Rumbas", url: "https://archive.org/download/cc-komercyjne/Sandra_Reisch_-_Rumbas.mp3"},
+			{title: "Xera - Elexia", url: "https://archive.org/download/cc-niekomercyjne-2/Xera_-_Elexia.mp3"},
+			{title: "Aleksandr Sjakin - The cool", url: "https://archive.org/download/Muzyka-CC/Aleksandr_Sjakin_-_The_cool.mp3"},
+			{title: "Adovabadan - Thats a plenty", url: "https://archive.org/download/cc-komercyjne/Adovabadan_-_Thats_a_plenty.mp3"},
+			{title: "Leslie Hunt - American Dream Man", url: "https://archive.org/download/RadioWolneMedia-MuzykaCc/Leslie_Hunt_-_American_Dream_Man.mp3"},
+			{title: "Pornophonique - Sad robot", url: "https://archive.org/download/cc-niekomercyjne-1/Pornophonique_-_Sad_robot.mp3"},
+			{title: "Sandra Reisch - No", url: "https://archive.org/download/cc-komercyjne/Sandra_Reisch_-_No.mp3"},
+			{title: "STEEP - It Could Be You", url: "https://archive.org/download/cc-niekomercyjne/STEEP-It_Could_Be_You.mp3"},
+			{title: "Cristian Battista - Quel tatuaggio", url: "https://archive.org/download/CcMusicForCommercialUse/Cristian_Battista_-_Quel_tatuaggio.mp3"},
+			{title: "The Racoons - Svenska Polka", url: "https://archive.org/download/cc-niekomercyjne-1/The_Racoons_-_Svenska_Polka.mp3"},
+			{title: "Babilon - On z nami piłby wino", url: "https://archive.org/download/cc-niekomercyjne-Babilon/Babilon_-_On_z_nami_pilby_wino.mp3"},
+			{title: "Talco - L'Odore della Morte", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_LOdore_della_Morte.mp3"},
+			{title: "NanowaR - Nanowar", url: "https://archive.org/download/cc-kom/NanowaR_-_Nanowar.mp3"},
+			{title: "Richie Reinholdt - Words", url: "https://archive.org/download/cc-komercyjne/Richie_Reinholdt_-_Words.mp3"},
+			{title: "MuzaOla - Spacer po niebie", url: "https://archive.org/download/CcMusicForCommercialUse/MuzaOla_-_Spacer_po_niebie.mp3"},
+			{title: "Final Round - Carry On", url: "https://archive.org/download/cc-niekomercyjne/Final_Round-Carry_On.mp3"},
+			{title: "Les Mandrinots - L'anguille", url: "https://archive.org/download/CcMusicForNon-commercialUse/Les_Mandrinots_-_Languille.mp3"},
+			{title: "Kalewala - U razbitogo koryta", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_U_razbitogo_koryta.mp3"},
+			{title: "Dennis Logan - Storm Of Tomorrow", url: "https://archive.org/download/cc-komercyjne/Dennis_Logan_-_Storm_Of_Tomorrow.mp3"},
+			{title: "Acallado - Salvaje leona", url: "https://archive.org/download/cc-niekomercyjne-A/Acallado_-_Salvaje_leona.mp3"},
+			{title: "Radmusic - Smak wiosny", url: "https://archive.org/download/cc-niekomercyjne-1/Radmusic_-_Smak_wiosny.mp3"},
+			{title: "Giovan - Lieb mich heut Nacht", url: "https://archive.org/download/cc-niekomercyjne-1/Giovan_-_Lieb_mich_heut_Nacht.mp3"},
+			{title: "Zapoj - Wiesjeljej", url: "https://archive.org/download/cc-niekomercyjne-3/Zapoj_-_Wiesjeljej.mp3"},
+			{title: "Neverland - Sin Destino", url: "https://archive.org/download/cc-niekomercyjne-1/Neverland_-_Sin_Destino.mp3"},
+			{title: "Sly Collins - Sweet Mother", url: "https://archive.org/download/cc-niekomercyjne-1/Sly_Collins_-_Sweet_Mother.mp3"},
+			{title: "Siergiej Szmal - Mama", url: "https://archive.org/download/CcMusicForNon-commercialUse/Siergiej_Szmal_-_Mama.mp3"},
+			{title: "Pornophonique - Space invaders", url: "https://archive.org/download/cc-niekomercyjne-1/Pornophonique_-_Space_invaders.mp3"},
+			{title: "Projet Z - A new beginning", url: "https://archive.org/download/cc-niekomercyjne-1/Projet_Z_-_A_new_beginning.mp3"},
+			{title: "Ovo - Krok", url: "https://archive.org/download/cc-niekomercyjne-1/Ovo_-_Krok.mp3"},
+			{title: "Kalewala - Ti z mienie pidmanula", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_Ti_z_mienie_pidmanula.mp3"},
+			{title: "Talco - A La Patchanka", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_A_La_Patchanka.mp3"},
+			{title: "La Olla Express - Pain", url: "https://archive.org/download/cc-niekomercyjne-1/La_Olla_Express_-_Pain.mp3"},
+			{title: "100PydOFF - Piwo SKA i football", url: "https://archive.org/download/cc-komercyjne/100PydOFF_-_Pivo_SKA_i_football.mp3"},
+			{title: "The Wind Whistles - Gold Fever", url: "https://archive.org/download/cc-niekomercyjne-1/The_Wind_Whistles_-_Gold_Fever.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Vuela Mariposa", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Vuela_Mariposa.mp3"},
+			{title: "EffekT - A ty jemu powierila", url: "https://archive.org/download/cc-komercyjne/EffekT_-_A_ty_jemu_powierila.mp3"},
+			{title: "Il Campione - Monta Mix Final", url: "https://archive.org/download/cc-komercyjne/Il_Campione_-_Monta_Mix_Final.mp3"},
+			{title: "Adapters - Wyjedzmy", url: "https://archive.org/download/cc-niekomercyjne-A/Adapters_-_Wyjedzmy.mp3"},
+			{title: "Mel's - Hey Girl", url: "https://archive.org/download/cc-niekomercyjne-1/Mels_-_Hey_Girl.mp3"},
+			{title: "Sztere Kote - Mareszonka (jezyk kaszubski)", url: "https://archive.org/download/Rwm-SztereKote_506/sztere-kote-mareszonka-plytowa.mp3"},
+			{title: "Kodul - Rabia", url: "https://archive.org/download/cc-niekom/Kodul_-_Rabia.mp3"},
+			{title: "NanowaR - Look at Two Reels", url: "https://archive.org/download/cc-kom/NanowaR_-_Look_at_Two_Reels.mp3"},
+			{title: "Sens-unique - Un peu de chaleur", url: "https://archive.org/download/cc-niekomercyjne-1/Sens-unique_-_Un_peu_de_chaleur.mp3"},
+			{title: "Anna Prijmak - Lieto", url: "https://archive.org/download/cc-niekomercyjne-A/Anna_Prijmak_-_Lieto.mp3"},
+			{title: "DJ Adensson - Get Away", url: "https://archive.org/download/cc-komercyjne/DJAdensson_-_Get_Away.mp3"},
+			{title: "The Easton Ellises - Falcon 69", url: "https://archive.org/download/cc-niekomercyjne/The_Easton_Ellises-Falcon_69.mp3"},
+			{title: "THC-X - Gimnazjalistki", url: "https://archive.org/download/cc-komercyjne/THC-X_-_Gimnazjalistki.mp3"},
+			{title: "Kate Orange - Zażgi", url: "https://archive.org/download/KateOrange/Kate-Orange-Zazgi.mp3"},
+			{title: "Les Bonobos - Ma_poubelle", url: "https://archive.org/download/cc-niekomercyjne-1/Les_Bonobos_-_Ma_poubelle.mp3"},
+			{title: "The Freak Fandango Orchestra - Boogich Bulgar", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-Boogich_Bulgar.mp3"},
+			{title: "Talco - Il passo del caciurdo", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Il_passo_del_caciurdo.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Cunadita", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Cunadita.mp3"},
+			{title: "Bratia Jenatowy - Dozit do wiesny", url: "https://archive.org/download/RadioWolneMedia_193/Bratia_Jenatowy_-_Dozit_do_wiesny.mp3"},
+			{title: "The Twins - Get Right 2 9t", url: "https://archive.org/download/cc-niekomercyjne-1/The_Twins_-_Get_Right_2_9t.mp3"},
+			{title: "Carlos Saura - A Lomos del Dragon Blanco", url: "https://archive.org/download/cc-niekomercyjne-1/CarlosSaura-ALomosDelDragonBlanco.mp3"},
+			{title: "Sztere Kote - Dzewczece wrozbe (jezyk kaszubski)", url: "https://archive.org/download/Rwm-SztereKote_506/sztere-kote-dzewczece-wrozbe.mp3"},
+			{title: "Sehene - Faire semblant", url: "https://archive.org/download/cc-niekomercyjne-1/Sehene_-_Faire_semblant.mp3"},
+			{title: "Talco - Testamento Di Un Buffone", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Testamento_Di_Un_Buffone.mp3"},
+			{title: "Gwozdi - Jedu za saljaraj", url: "https://archive.org/download/cc-niekomercyjne/Gwozdi-jedu-za-saljaraj.mp3"},
+			{title: "Disconauts Music Production - Golden Wings", url: "https://archive.org/download/cc-niekomercyjne/Disconauts_Music_Production-Golden_Wings.mp3"},
+			{title: "Loudog - Gone", url: "https://archive.org/download/cc-niekomercyjne-1/Loudog_-_Gone.mp3"},
+			{title: "Mancy - Chwile", url: "https://archive.org/download/CcMusicForNon-commercialUse/Mancy_-_Chwile.mp3"},
+			{title: "Dennis Logan - Shades Of Sorrow", url: "https://archive.org/download/cc-komercyjne/Dennis_Logan_-_Shades_Of_Sorrow.mp3"},
+			{title: "Les Bonobos - Slice nDice", url: "https://archive.org/download/cc-niekomercyjne-1/Les_bonobos_-_sliceNdice.mp3"},
+			{title: "Tenpenny Joke - Never Enough", url: "https://archive.org/download/Rwm-Attribution-noderivs3.0Unported/tenpenny_joke_-_never-enough.mp3"},
+			{title: "Amanita Muscaria - Slowa", url: "https://archive.org/download/cc-niekomercyjne-A/Amanita_Muscaria_-_Slowa.mp3"},
+			{title: "Erwann les Seraphins - Ma petite anglaise", url: "https://archive.org/download/cc-niekomercyjne-1/Erwann_les_Seraphins_-_Ma_petite_anglaise.mp3"},
+			{title: "Babilon - Nie jestem politykiem", url: "https://archive.org/download/RadioWolneMedia_738/Babilon_-_Nie_jestem_politykiem.mp3"},
+			{title: "Richie Reinholdt - Ready to fly", url: "https://archive.org/download/cc-komercyjne/Richie_Reinholdt_-_Ready_to_fly.mp3"},
+			{title: "Michail Czerbjakow - Zub zalatoj", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Zub_zalatoj.mp3"},
+			{title: "Les Bonobos - Tintinnabule", url: "https://archive.org/download/cc-niekomercyjne-1/Les_Bonobos_-_Tintinnabule.mp3"},
+			{title: "Paradox - Rajeczka", url: "https://archive.org/download/cc-niekomercyjne-1/Paradox_-_Rajeczka.mp3"},
+			{title: "Michail Czerbjakow - Licejskij rock-n-roll", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Licejskij_rock-n-roll.mp3"},
+			{title: "Beto Campos - Baile de fazenda", url: "https://archive.org/download/cc-komercyjne2/Beto_Campos_-_Baile_de_fazenda.mp3"},
+			{title: "PeerGynt Lobogris - Shattered Moon", url: "https://archive.org/download/rwm-cc-nc-11-04/PeerGynt-Lobogris-Shattered-Moon.mp3"},
+			{title: "Waiting Area - Tua sorella", url: "https://archive.org/download/cc-niekom/Waiting_Area_-_Tua_sorella.mp3"},
+			{title: "Adovabadan - Orys creole trombone", url: "https://archive.org/download/cc-komercyjne/Adovabadan_-_Orys_creole_trombone.mp3"},
+			{title: "THC-X - Techniawka", url: "https://archive.org/download/cc-komercyjne/THC-X_-_Techniawka.mp3"},
+			{title: "The Freak Fandango Orchestra - A Russian Circus Story", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-A_Russian_Circus_Story.mp3"},
+			{title: "THC-X - Pa-ta-ta-ja", url: "https://archive.org/download/cc-komercyjne/THC-X_-_Pa-ta-ta-ja.mp3"},
+			{title: "Adapters - Nuda", url: "https://archive.org/download/cc-niekomercyjne-A/Adapters_-_Nuda.mp3"},
+			{title: "Mordercy P - Kochankowie", url: "https://archive.org/download/cc-niekomercyjne-1/Mordercy_P_-_Kochankowie.mp3"},
+			{title: "The Racoons - Tirvan Polkka", url: "https://archive.org/download/cc-niekomercyjne-1/The_Racoons_-_Tirvan_Polkka.mp3"},
+			{title: "Crete Boom - Helpless", url: "https://archive.org/download/cc-niekomercyjne-1/Crete_Boom_-_Helpless.mp3"},
+			{title: "Talco - Corri", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Corri.mp3"},
+			{title: "MuzaOla - Virus Beethoven", url: "https://archive.org/download/CcMusicForCommercialUse/MuzaOla_-_Virus_Beethoven.mp3"},
+			{title: "Zapoj - Normalnyje ljudi", url: "https://archive.org/download/cc-niekomercyjne-3/Zapoj_-_Normalnyje_ljudi.mp3"},
+			{title: "Both - Elles disent", url: "https://archive.org/download/cc-niekomercyjne-1/Both_-_Elles_disent.mp3"},
+			{title: "Xcyril - SGO - Main title", url: "https://archive.org/download/RadioWolneMedia_534/Xcyril_-_SGO_-_Main_title.mp3"},
+			{title: "Kalewala - Milyj", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_Milyj.mp3"},
+			{title: "Uvie - Ye pal", url: "https://archive.org/download/cc-niekomercyjne-2/Uvie_-_Ye_pal.mp3"},
+			{title: "Tino Rodriguez - Con Carino a Mama", url: "https://archive.org/download/cc-niekomercyjne-1/Tino_Rodriguez_-_Con_Carino_a_Mama.mp3"},
+			{title: "Limbo deluxe - Subela", url: "https://archive.org/download/cc-komercyjne/Limbo_deluxe_-_Subela.mp3"},
+			{title: "David TMX - Lesbos", url: "https://archive.org/download/cc-niekomercyjne-1/David_TMX_-_Lesbos.mp3"},
+			{title: "Poranek - Obudz sie", url: "https://archive.org/download/MusicCc-Non-commercialUse/Poranek_-_Obudz_sie.mp3"},
+			{title: "Kalewala - Kalewala", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_Kalewala.mp3"},
+			{title: "Au Lit les Momes - La fidele Gastro", url: "https://archive.org/download/cc-niekomercyjne-A/Au_Lit_les_Momes_-_La_fidele_Gastro.mp3"},
+			{title: "Talco - Combat Circus", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Combat_Circus.mp3"},
+			{title: "Paio - Arabica", url: "https://archive.org/download/rwm-cc-nc-20-04/PAIO-ARABICA.mp3"},
+			{title: "STEEP - Remote Control", url: "https://archive.org/download/cc-niekomercyjne/STEEP-Remote_Control.mp3"},
+			{title: "Ilmera - Im perfect for you (wersja rosyjska)", url: "https://archive.org/download/RadioWolneMedia_991/Ilmera_-_Im_perfect_for_you.mp3"},
+			{title: "Substancja - Intro", url: "https://archive.org/download/Rwm-Attribution-noderivs3.0Unported/substancja_-_intro.mp3"},
+			{title: "The Freak Fandango Orchestra - The Hug", url: "https://archive.org/download/cc-niekomercyjne-1/The_Freak_Fandango_Orchestra_-_The_Hug.mp3"},
+			{title: "Pornophonique - 0,5 player game", url: "https://archive.org/download/cc-niekomercyjne-1/Pornophonique_-_05_player_game.mp3"},
+			{title: "Tenpenny Joke - Flood", url: "https://archive.org/download/Rwm-Attribution-noderivs3.0Unported/tenpenny_joke_-_flood.mp3"},
+			{title: "Talco - Partigiano", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Partigiano.mp3"},
+			{title: "Aschot - Szanhaj", url: "https://archive.org/download/cc-komercyjne/Aschot_-_Szanhaj.mp3"},
+			{title: "The Freak Fandango Orchestra - Nevermore", url: "https://archive.org/download/cc-niekomercyjne-1/The_Freak_Fandango_Orchestra_-_Nevermore.mp3"},
+			{title: "Kabina 13 bjed - Samaljot", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kabina_13_bjed_-_Samaljot.mp3"},
+			{title: "Djvintage - Lamento boliviano", url: "https://archive.org/download/cc-niekomercyjne-1/Djvintage_-_Lamento_boliviano.mp3"},
+			{title: "Collectif Kimbalajeuness - Bella Ciao", url: "https://archive.org/download/cc-niekomercyjne-1/Collectif_Kimbalajeuness_-_Bella_Ciao.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Pensarias Darme Pena", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Pensarias_Darme_Pena.mp3"},
+			{title: "Nocreeps - It's up to you", url: "https://archive.org/download/cc-komercyjne/Nocreeps_-_Its_up_to_you.mp3"},
+			{title: "Aschot - Swadiebnyj bukiet", url: "https://archive.org/download/cc-komercyjne/Aschot_-_Swadiebnyj_bukiet.mp3"},
+			{title: "Les Mandrinots - Diguedondaine", url: "https://archive.org/download/CcMusicForNon-commercialUse/Les_Mandrinots_-_Diguedondaine.mp3"},
+			{title: "The Freak Fandango Orchestra - Bublitzki", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-Bublitzki.mp3"},
+			{title: "Elessar - Paproboj atkryt glaza", url: "https://archive.org/download/CcMusicForNon-commercialUse/Elessar_-_Paproboj_atkryt_glaza.mp3"},
+			{title: "Michail Czerbjakow - Zolata jablak", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Zolata_jablak.mp3"},
+			{title: "Talco - La Carovana", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_La_Carovana.mp3"},
+			{title: "The Freak Fandango Orchestra - The Gypsy Song", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-The_Gypsy_Song.mp3"},
+			{title: "Pornophonique - I want to be a machine", url: "https://archive.org/download/cc-niekomercyjne-1/Pornophonique_-_I_want_to_be_a_machine.mp3"},
+			{title: "Babilon - Bambosze", url: "https://archive.org/download/cc-niekomercyjne-Babilon/Babilon_-_Bambosze.mp3"},
+			{title: "Ceili Moss - The bee", url: "https://archive.org/download/cc-niekomercyjne-1/Ceili_Moss_-_The_bee.mp3"},
+			{title: "Mordercy P - Krotka piosenka", url: "https://archive.org/download/cc-niekomercyjne-1/Mordercy_P_-_Krotka_piosenka.mp3"},
+			{title: "100PydOFF - Priszla wiesna", url: "https://archive.org/download/cc-komercyjne/100PydOFF_-_Prishla_vesna.mp3"},
+			{title: "Breezelless - Love me", url: "hate me", url: "https://archive.org/download/cc-niekom/Breezeless_-_Love_me_hate_me.mp3"},
+			{title: "Final Round - Spark", url: "https://archive.org/download/cc-niekomercyjne/Final_Round-Spark.mp3"},
+			{title: "Kostas Papanastasiou - Boot auf dem Meer", url: "https://archive.org/download/cc-niekomercyjne-1/Kostas_Papanastasiou_-_Boot_auf_dem_Meer.mp3"},
+			{title: "Les Mandrinots - Les ponts de rompon", url: "https://archive.org/download/CcMusicForNon-commercialUse/Les_Mandrinots_-_Les_ponts_de_rompon.mp3"},
+			{title: "100PydOFF - 220V", url: "https://archive.org/download/cc-komercyjne/100PydOFF_-_220V.mp3"},
+			{title: "Collectif Kimbalajeuness - Precarieta", url: "https://archive.org/download/cc-niekomercyjne-1/Collectif_Kimbalajeuness_-_Precarieta.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Noche de Estrellas", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Noche_de_Estrellas.mp3"},
+			{title: "AnDy - Loud", url: "https://archive.org/download/cc-niekomercyjne-A/AnDy_-_Loud.mp3"},
+			{title: "Psio Crew - Baciar", url: "https://archive.org/download/cc-niekomercyjne-1/Psio_Crew_-_Baciar.mp3"},
+			{title: "Alina Yudaeva - Examen", url: "https://archive.org/download/rwm-13-04/Alina-Yudaeva-Examen.mp3"},
+			{title: "Amanita Muscaria - Wniosek nasuwa sie sam", url: "https://archive.org/download/cc-niekomercyjne-A/Amanita_Muscaria_-_Wniosek_nasuwa_sie_sam.mp3"},
+			{title: "Anoymous - Illuminati", url: "https://archive.org/download/Rwm-Attribution-noderivs3.0Unported/anoymous_-_illuminati.mp3"},
+			{title: "NanowaR - King", url: "https://archive.org/download/cc-kom/NanowaR_-_King.mp3"},
+			{title: "Oleg Kurbatov Projec - Ja ulieczu", url: "https://archive.org/download/cc-niekom/Oleg_Kurbatov_Projec_-_Ja_ulieczu.mp3"},
+			{title: "Countdown - Behind", url: "https://archive.org/download/cc-niekomercyjne-1/Countdown_-_Behind.mp3"},
+			{title: "Green Team - Prijezaj w Kokszetau", url: "https://archive.org/download/CcMusicForCommercialUse/Green_Team_-_Prijezaj_w_Kokszetau.mp3"},
+			{title: "Wadim Pietrow - Pierwaja", url: "https://archive.org/download/cc-niekomercyjne-2/Wadim_Pietrow_-_Pierwaja.mp3"},
+			{title: "THC-X - Droga 2003", url: "https://archive.org/download/cc-komercyjne/THC-X_-_Droga_2003.mp3"},
+			{title: "BlondBlood - Flu", url: "https://archive.org/download/cc-niekomercyjne-1/BlondBlood_-_Flu.mp3"},
+			{title: "Eva Maria - No me olvidaras", url: "https://archive.org/download/EvaMariaSiQuieresVolver/Eva_Maria_-_No_me_olvidaras.mp3"},
+			{title: "Pornophonique - Game over", url: "https://archive.org/download/cc-niekomercyjne-1/Pornophonique_-_Game_over.mp3"},
+			{title: "The Freak Fandango Orchestra - Hey Moe", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-Hey_Moe.mp3"},
+			{title: "Dickey F. - Fedots Boogie", url: "https://archive.org/download/CcMusicForCommercialUse/Dickey_F_-_Fedots_Boogie.mp3"},
+			{title: "Luingo - Manou", url: "https://archive.org/download/cc-komercyjne/Luingo_-_Manou.mp3"},
+			{title: "Kalewala - Laduszka", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_Laduszka.mp3"},
+			{title: "100PydOFF - SuperStar", url: "https://archive.org/download/cc-komercyjne/100PydOFF_-_SuperStar.mp3"},
+			{title: "Talco - La Fabbrica Del Dissenso", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_La_Fabbrica_Del_Dissenso.mp3"},
+			{title: "Prinz Konig - Man sagt", url: "https://archive.org/download/cc-komercyjne/Prinz_Konig_-_Man_sagt.mp3"},
+			{title: "La Olla Express - Babylon", url: "https://archive.org/download/cc-niekomercyjne-1/La_Olla_Express_-_Babylon.mp3"},
+			{title: "Banda Patinko - Beijinho-ao-vivo", url: "https://archive.org/download/cc-niekomercyjne-1/Banda_Patinko_-_Beijinho-ao-vivo.mp3"},
+			{title: "Francis Boy - Viejo Oeste Subelo", url: "https://archive.org/download/cc-komercyjne/Francis_Boy_-_Viejo_Oeste_Subelo.mp3"},
+			{title: "Kalewala - Goj Olien", url: "https://archive.org/download/CcMusicForNon-commercialUse/Kalewala_-_Goj_Olien.mp3"},
+			{title: "The Freak Fandango Orchestra - Santa Alegra", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-Santa_Alegra.mp3"},
+			{title: "Nocreeps - Invisible Enemy", url: "https://archive.org/download/cc-komercyjne/Nocreeps_-_Invisible_Enemy.mp3"},
+			{title: "Systyle - Bahbushska", url: "https://archive.org/download/cc-niekomercyjne-1/Systyle_-_Bahbushska.mp3"},
+			{title: "Kostas Papanastasiou - 10 Burschen", url: "https://archive.org/download/cc-niekomercyjne-1/Kostas_Papanastasiou_-_10_Burschen.mp3"},
+			{title: "Echo Lali - En sortant de lecole", url: "https://archive.org/download/RadioWolneMedia_799/Echo_Lali_-_En_sortant_de_lecole.mp3"},
+			{title: "Callejon Oscuro - Jodido Hasta El Amanecer", url: "https://archive.org/download/cc-niekomercyjne-1/Callejon_Oscuro_-_Jodido_Hasta_El_Amanecer.mp3"},
+			{title: "Both - En attendant daller sur mars", url: "https://archive.org/download/cc-niekomercyjne-1/Both_-_en_attendant_daller_sur_mars.mp3"},
+			{title: "Babilon - Ziemia", url: "https://archive.org/download/cc-komercyjne/Babilon_-_Ziemia.mp3"},
+			{title: "Talco - 11 Settembre 73", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_11_Settembre_73.mp3"},
+			{title: "Cal Tres - Comme papa", url: "https://archive.org/download/cc-niekomercyjne-1/Cal_Tres_-_Comme_papa.mp3"},
+			{title: "EffekT - Tiebia bolsze niet", url: "https://archive.org/download/cc-komercyjne/EffekT_-_Tiebia_bolsze_niet.mp3"},
+			{title: "Alexander Aristov - Crazy Dream", url: "https://archive.org/download/rwm-13-04/Alexander-Aristov-Crazy-Dream.mp3"},
+			{title: "La Olla Express - Aeropuerto", url: "https://archive.org/download/cc-niekomercyjne-1/La_Olla_Express_-_Aeropuerto.mp3"},
+			{title: "Richie Reinholdt - The Wages Of Love", url: "https://archive.org/download/cc-komercyjne/Richie_Reinholdt_-_The_Wages_Of_Love.mp3"},
+			{title: "Sens-unique - Seul", url: "https://archive.org/download/cc-niekomercyjne-1/Sens-unique_-_Seul.mp3"},
+			{title: "Marcc Gregory - Sex Light", url: "https://archive.org/download/cc-niekomercyjne/Marcc-Gregory_Sex-Light.mp3"},
+			{title: "Igor Sachalin - Swadzba", url: "https://archive.org/download/cc-niekomercyjne-1/Igor_Sachalin_-_Swadzba.mp3"},
+			{title: "Euskal Herriko eta Saharako musikariak - Shwita", url: "https://archive.org/download/cc-niekomercyjne-1/Euskal_Herriko_eta_Saharako_musikariak_-_Shwita.mp3"},
+			{title: "K-Wet - Les anonymes", url: "https://archive.org/download/cc-niekomercyjne-1/K-Wet_-_Les_anonymes.mp3"},
+			{title: "The Dreamers - Swiatla", url: "https://archive.org/download/cc-niekom/The_Dreamers_-_Swiatla.mp3"},
+			{title: "La Olla Express - Oporto 0300 am", url: "https://archive.org/download/cc-niekomercyjne-1/La_Olla_Express_-_Oporto_0300_am.mp3"},
+			{title: "Yves Klein Blue - Polka", url: "https://archive.org/download/cc-niekomercyjne-3/Yves_Klein_Blue_-_Polka.mp3"},
+			{title: "Paradox - Rockowania pokojowe", url: "https://archive.org/download/cc-niekomercyjne-1/Paradox_-_Rockowania_pokojowe.mp3"},
+			{title: "Rein - Est", url: "https://archive.org/download/cc-niekomercyjne-1/Rein_-_Est.mp3"},
+			{title: "Talco - Bella Ciao", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Bella_Ciao.mp3"},
+			{title: "Beatpick - Papo ross-mi camioncito", url: "https://archive.org/download/cc-niekomercyjne-1/Beatpick_-_Papo_ross-mi_camioncito.mp3"},
+			{title: "Aschot - Japonija", url: "https://archive.org/download/cc-komercyjne/Aschot_-_Japonija.mp3"},
+			{title: "Talco - La Crociata del Dittatore Bianco", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_La_Crociata_del_Dittatore_Bianco.mp3"},
+			{title: "Richie Reinholdt - Only A Dream", url: "https://archive.org/download/cc-komercyjne/Richie_Reinholdt_-_Only_A_Dream.mp3"},
+			{title: "Milana - La-la-la-la", url: "https://archive.org/download/cc-niekomercyjne-1/Milana_-_La-la-la-la.mp3"},
+			{title: "Mordercy P - Czarne rajstopy", url: "https://archive.org/download/cc-niekomercyjne-1/Mordercy_P_-_Czarne_rajstopy.mp3"},
+			{title: "Paradox - Jelonek", url: "https://archive.org/download/cc-niekomercyjne-1/Paradox_-_Jelonek.mp3"},
+			{title: "The Wind Whistles - Ballad of a Jailbreak Wedding", url: "https://archive.org/download/cc-niekomercyjne-1/The_Wind_Whistles_-_Ballad_of_a_Jailbreak_Wedding.mp3"},
+			{title: "Talco - Notti Cilene", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Notti_Cilene.mp3"},
+			{title: "The Passive Aggressive - Tears Tears Tears", url: "https://archive.org/download/rwm-cc-nc-20-04/The-Passive-Aggressive-Tears-Tears-Tears.mp3"},
+			{title: "Babilon - Nabywca", url: "https://archive.org/download/RadioWolneMedia_738/Babilon_-_Nabywca.mp3"},
+			{title: "Sagar - The Journey", url: "https://archive.org/download/cc-komercyjne/Sagar_-_The_Journey.mp3"},
+			{title: "Mastjerklass - Wtapiwajem pol", url: "https://archive.org/download/CcMusicForNon-commercialUse/Mastjerklass_-_Wtapiwajem_pol.mp3"},
+			{title: "Amanita Muscaria - Wybuduj swoj dom", url: "https://archive.org/download/cc-niekomercyjne-A/Amanita_Muscaria_-_Wybuduj_swoj_dom.mp3"},
+			{title: "Zapoj - Apiat", url: "https://archive.org/download/cc-niekomercyjne-3/Zapoj_-_Apiat.mp3"},
+			{title: "Dickey F. - Goodbye King Of Lizards", url: "https://archive.org/download/CcMusicForCommercialUse/Dickey_F_-_Goodbye_King_Of_Lizards.mp3"},
+			{title: "NanowaR - Lamento Erotico", url: "https://archive.org/download/cc-kom/NanowaR_-_Lamento_Erotico.mp3"},
+			{title: "Both - Now or never", url: "https://archive.org/download/cc-niekomercyjne-1/Both_-_Now_or_never.mp3"},
+			{title: "Michail Czerbjakow - Z dniom razdienija licej", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Z_dniom_razdienija_licej.mp3"},
+			{title: "Acallado - El piojo", url: "https://archive.org/download/cc-niekomercyjne-A/Acallado_-_El_piojo.mp3"},
+			{title: "Sly Collins - JJC", url: "https://archive.org/download/cc-niekomercyjne-1/Sly_Collins_-_JJC.mp3"},
+			{title: "Sly Collins - Don't Hide Truth", url: "https://archive.org/download/cc-niekomercyjne-1/Sly_Collins_-_Dont_Hide_Truth.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Linda Chiquilla", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Linda_Chiquilla.mp3"},
+			{title: "Rei Teytum - Viajeros", url: "https://archive.org/download/cc-komercyjne/Rei_Teytum_-_Viajeros.mp3"},
+			{title: "Wadim Pietrow - Wtaraja", url: "https://archive.org/download/cc-niekomercyjne-2/Wadim_Pietrow_-_Wtaraja.mp3"},
+			{title: "Acallado - Trampolin de los suenos", url: "https://archive.org/download/cc-niekomercyjne-A/Acallado_-_Trampolin_de_los_suenos.mp3"},
+			{title: "Igor Saksin - 40 liet", url: "https://archive.org/download/RadioWolneMedia-MuzykaCc/Igor_Saksin_-_40_liet.mp3"},
+			{title: "Ilmera - Sekrety", url: "https://archive.org/download/RadioWolneMedia_991/Ilmera_-_Sekrety.mp3"},
+			{title: "Lu Leu SBF - Intra L'Occhi", url: "https://archive.org/download/cc-niekomercyjne-1/Lu_Leu_SBF_-_Intra_LOcchi.mp3"},
+			{title: "Babilon - Rakieta", url: "https://archive.org/download/cc-komercyjne/Babilon_-_Rakieta.mp3"},
+			{title: "Acallado - Extranjero Zameba", url: "https://archive.org/download/cc-niekomercyjne-A/Acallado_-_Extranjero_Zameba.mp3"},
+			{title: "Mordercy P - Maly powod do radosci", url: "https://archive.org/download/cc-niekomercyjne-1/Mordercy_P_-_Maly_powod_do_radosci.mp3"},
+			{title: "Kostas Papanastasiou - Kleine Schwalbe", url: "https://archive.org/download/cc-niekomercyjne-1/Kostas_Papanastasiou_-_Kleine_Schwalbe.mp3"},
+			{title: "Emily County Folk - Contro", url: "https://archive.org/download/cc-niekomercyjne-1/Emily_County_Folk_-_Contro.mp3"},
+			{title: "Gliedkuchen - Hyazinthen", url: "https://archive.org/download/cc-niekomercyjne-1/Gliedkuchen_-_Hyazinthen.mp3"},
+			{title: "Au Lit les Momes - Le nombril", url: "https://archive.org/download/cc-niekomercyjne-A/Au_Lit_les_Momes_-_Le_nombril.mp3"},
+			{title: "Babilon - Dom", url: "https://archive.org/download/cc-komercyjne/Babilon_-_Dom.mp3"},
+			{title: "Banau - Pila", url: "https://archive.org/download/cc-niekomercyjne-1/Banau_-_Pila.mp3"},
+			{title: "Talco - Oro Nero", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_Oro_Nero.mp3"},
+			{title: "Acallado - Moobing", url: "https://archive.org/download/cc-niekomercyjne-A/Acallado_-_Moobing.mp3"},
+			{title: "Averoplan - Night", url: "https://archive.org/download/CcMusicForNon-commercialUse/Averoplan_-_Night.mp3"},
+			{title: "Dan Darasz - Kopaja miecztu", url: "https://archive.org/download/CcMusicForNon-commercialUse/Dan_Darasz_-_Kopaja_miecztu.mp3"},
+			{title: "Talco - 60 Anni", url: "https://archive.org/download/rwm-poprawki-cc/Talco_-_60_Anni.mp3"},
+			{title: "Aliver J.GOL - Versione inedita", url: "https://archive.org/download/cc-niekomercyjne/Aliver_J-kropka-GOL_versione_inedita.mp3"},
+			{title: "Beto Campos - Assanhada", url: "https://archive.org/download/cc-komercyjne/Beto_Campos_-_Assanhada.mp3"},
+			{title: "Babilon - Ene due rabe", url: "https://archive.org/download/cc-niekomercyjne-Babilon/Babilon_-_Ene_due_rabe.mp3"},
+			{title: "Dickey F. - Crazy Train", url: "https://archive.org/download/CcMusicForCommercialUse/Dickey_F_-_Crazy_Train.mp3"},
+			{title: "Babilon - Dzieci są w Irlandii", url: "https://archive.org/download/cc-niekomercyjne-Babilon/Babilon_-_Dzieci_sa_w_irlandii.mp3"},
+			{title: "Fanaberia - Luv U", url: "https://archive.org/download/cc-komercyjne/Fanaberia_-_Luv_U.mp3"},
+			{title: "Giuseppe docimo - Maria du Pettoruto", url: "https://archive.org/download/cc-niekomercyjne-1/GiuseppeDocimo_-_maria_du_pettoruto.mp3"},
+			{title: "Kids With Guns - Eletrock", url: "https://archive.org/download/cc-niekomercyjne-1/Kids_With_Guns_-_Eletrock.mp3"},
+			{title: "Michail Czerbjakow - Drug naliwaj", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Drug_naliwaj.mp3"},
+			{title: "Xera - Lonesome mans dance", url: "https://archive.org/download/cc-niekomercyjne-2/Xera_-_Lonesome_mans_dance.mp3"},
+			{title: "Jahmac - Reggae and unity", url: "https://archive.org/download/cc-niekomercyjne-1/Jahmac_-_Reggae_and_unity.mp3"},
+			{title: "ExCake - Le reve impossible", url: "https://archive.org/download/cc-niekomercyjne-1/ExCake_-_Le_reve_impossible.mp3"},
+			{title: "Adovabadan - In cerca di te", url: "https://archive.org/download/cc-komercyjne/Adovabadan_-_In_cerca_di_te.mp3"},
+			{title: "Sikos - Whats so funny", url: "https://archive.org/download/cc-niekomercyjne-1/Sikos_-_Whats_so_funny.mp3"},
+			{title: "Michail Czerbjakow - Dl swidanja", url: "https://archive.org/download/cc-niekomercyjne-1/Michail_Czerbjakow_-_Dl_swidanija.mp3"},
+			{title: "Distemper - Start to relax", url: "https://archive.org/download/RadioWolneMedia_799/Distemper_-_Start_to_relax.mp3"},
+			{title: "Xera - Trasmerana", url: "https://archive.org/download/cc-niekomercyjne-3/Xera_-_Trasmerana.mp3"},
+			{title: "The Wind Whistles - Man by Name of Denver", url: "https://archive.org/download/cc-niekomercyjne-1/The_Wind_Whistles_-_Man_by_Name_of_Denver.mp3"},
+			{title: "Poranek - Szukam promien", url: "https://archive.org/download/MusicCc-Non-commercialUse/Poranek_-_Szukam_promieni.mp3"},
+			{title: "Les Mandrinots - Quinze marins", url: "https://archive.org/download/CcMusicForNon-commercialUse/Les_Mandrinots_-_Quinze_marins.mp3"},
+			{title: "Fredo et la compagnie - Tahiti", url: "https://archive.org/download/CcMusicForNon-commercialUse/Fredo_et_la_compagnie_-_Tahiti.mp3"},
+			{title: "Nadia - Robie co chce", url: "mowie co chce", url: "https://archive.org/download/cc-komercyjne/Nadia_-_Robie_co_chce_mowie_co_chce.mp3"},
+			{title: "NanowaR - The Forest of Magnaccions", url: "https://archive.org/download/cc-kom/NanowaR_-_The_Forest_of_Magnaccions.mp3"},
+			{title: "Oferta especial - CFCS", url: "https://archive.org/download/cc-niekomercyjne-1/Oferta_especial_-_CFCS.mp3"},
+			{title: "Poranek - Morze splonie", url: "https://archive.org/download/MusicCc-Non-commercialUse/Poranek_-_Morze_splonie.mp3"},
+			{title: "Oferta especial - Polska", url: "https://archive.org/download/cc-niekomercyjne-1/Oferta_especial_-_Polska.mp3"},
+			{title: "Zapoj - Gorodskaja zizn", url: "https://archive.org/download/cc-niekomercyjne-3/Zapoj_-_Gorodskaja_zizn.mp3"},
+			{title: "The Freak Fandango Orchestra - We'll Save The World", url: "https://archive.org/download/cc-niekomercyjne/The_Freak_Fandango_Orchestra-We_ll_Save_The_World.mp3"},
+			{title: "Breezelless - Strong", url: "https://archive.org/download/cc-niekom/Breezeless_-_Strong.mp3"},
+			{title: "Rolan Diaz y su Grupo Leyenda - Ilusion Perdida", url: "https://archive.org/download/cc-niekomercyjne-1/Rolan_Diaz_y_su_Grupo_Leyenda_-_Ilusion_Perdida.mp3"},
+			{title: "Emily County Folk - Il comandante Picelli", url: "https://archive.org/download/cc-niekomercyjne-1/Emily_County_Folk_-_Il_comandante_Picelli.mp3"},
+			{title: "Music Box - Minha vida", url: "https://archive.org/download/cc-niekomercyjne/Music%20Box%20-%20Minha%20vida.mp3"},
+			{title: "Sztere Kote - Czemu Macku koza bijesz (jezyk kaszubski)", url: "https://archive.org/download/Rwm-SztereKote_506/sztere-kote-czemu-macku-koza-bijesz.mp3"}
+        ];
+        let currentTrack = 0;
+        const player = document.getElementById("player");
+        const currentTrackDisplay = document.getElementById("current-track");
+        const playlistElement = document.getElementById("playlist");
+
+        // Tworzenie listy utworów
+        playlist.forEach((track, index) => {
+            const li = document.createElement("li");
+            li.textContent = track.title;
+            li.addEventListener("click", () => {
+                currentTrack = index;
+                playTrack();
+                updateActiveTrack();
+            });
+            playlistElement.appendChild(li);
+        });
+
+        function playTrack() {
+            player.src = playlist[currentTrack].url;
+            currentTrackDisplay.textContent = `Odtwarzanie: ${playlist[currentTrack].title}`;
+            player.play().catch(error => {
+                console.error("Błąd odtwarzania:", error);
+                currentTrackDisplay.textContent += " (Błąd: sprawdź CORS lub dostępność pliku)";
+            });
+        }
+
+        function updateActiveTrack() {
+            const tracks = playlistElement.getElementsByTagName("li");
+            for (let i = 0; i < tracks.length; i++) {
+                tracks[i].classList.remove("active");
+                if (i === currentTrack) {
+                    tracks[i].classList.add("active");
+                }
+            }
+        }
+
+        player.onended = function() {
+            currentTrack++;
+            if (currentTrack < playlist.length) {
+                playTrack();
+                updateActiveTrack();
+            } else {
+                currentTrack = 0; // Zapętl playlistę
+                playTrack();
+                updateActiveTrack();
+            }
+        };
+
+        // Rozpocznij odtwarzanie
+        playTrack();
+        updateActiveTrack();
+    </script>
+</body>
+</html>
